@@ -1129,7 +1129,7 @@ for (int i = 1; i < 24 * 24; i++) {
     if (yout[i] < yout_min) yout_min = yout[i];
     if (yout[i] > yout_max) yout_max = yout[i];
 }
-printf("yout (pre-tanh) min: %d, max: %d\n", yout_min, yout_max);
+
 
  
   // tanh + export [0..255]
