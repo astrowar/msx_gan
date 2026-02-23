@@ -342,7 +342,7 @@ def main():
     parser.add_argument('image', help='Caminho para a imagem')
     parser.add_argument(
         '--checkpoint',
-        default='output_classifier/regressor_best.pth',
+        default='/home/astro/ml/gan/c32/msx_repo/infer/output_classifier/regressor_best.pth',
         help='Caminho para o checkpoint do modelo'
     )
     parser.add_argument('--image-size', type=int, default=24, choices=[24, 32])

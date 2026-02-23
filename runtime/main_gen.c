@@ -179,7 +179,19 @@ int main(int argc, char** argv) {
   make_z(z, ZN);
 
 
-  generator_forward(sequences[seed % 8192], out8);
+
+
+  int8_t hair_curryt[] = { 0,1,0,0,0,1,0,0,0,1,3,2,1,-1,-2,-1,0,-2,-3,-2,0,0,-1,0,-1,-2,-5,-3,0,-1,-2,-2,0,1,1,0,1,2,2,2,0,1,0,0,0,1,1,1,0,0,-1,0,0,0,-1,0,0,-1,-1,-1,0,2,4,2 };
+  int8_t hair_brown_ligth[]={  0,0,0,3,-1,1,0,2,0,-2,1,-5,2,2,1,3,3,1,-1,5,1,1,0,7,3,4,1,10,2,2,1,6,-2,0,0,0,-1,-1,1,-3,0,1,0,5,-1,0,0,3,-1,2,0,8,1,1,1,1,1,0,0,1,0,-4,1,-5 };
+
+  int8_t zmean[64];
+  for (int i = 0; i < 64; i++) {
+    zmean[i] = (hair_curryt[i] + hair_brown_ligth[i])   + sequences[seed%8192][i]/3;
+  }
+
+  generator_forward(zmean, out8);
+  
+  
   if (0) {
   //generator_forward_float(z, out8); // teste versão float (deve ser similar à fixed)
   for (int i = 0; i < 24 * 24; i++) {
