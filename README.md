@@ -25,6 +25,24 @@ The generator uses a quantized Wasserstein GAN (WGAN) trained on portrait data, 
 
 - **ROM Cartridge**: Packaged as a ROM file that can be loaded directly into MSX hardware
 
+
+## Screenshots
+
+### Selection Menu
+![Selection Menu](images/openmsx0038.png)
+
+
+### Generated Portraits
+![Portrait Example 1](images/openmsx0025.png)
+![Portrait Example 2](images/openmsx0026.png)
+![Portrait Example 3](images/openmsx0027.png)
+![Portrait Example 4](images/openmsx0029.png)
+![Different Styles 5](images/openmsx0030.png)
+![Different Styles 6](images/openmsx0032.png)
+![Different Styles 7](images/openmsx0033.png)
+![Different Styles 8](images/openmsx0035.png)
+
+
 ## Technical Details
 
 ### Architecture
@@ -180,25 +198,8 @@ These tools help in creating the selection menu by mapping user choices to speci
 - **Memory Usage**: Uses only 16KB RAM bank (weights stored in ROM)
 - **ROM Size**: Approximately 128KB (including all network weights)
 
-## Screenshots
-
-### Selection Menu
-![Selection Menu](images/openmsx0024.png)
-![Menu Options](images/openmsx0025.png)
-
-### Generated Portraits
-![Portrait Example 1](images/openmsx0026.png)
-![Portrait Example 2](images/openmsx0027.png)
-![Portrait Example 3](images/openmsx0029.png)
-
-### Various Characteristics
-![Different Styles 1](images/openmsx0030.png)
-![Different Styles 2](images/openmsx0032.png)
-![Different Styles 3](images/openmsx0033.png)
-![Different Styles 4](images/openmsx0035.png)
-
-### Menu 
-![Different Styles 4](images/openmsx0038.png)
+ 
+ 
 
 The `images/` directory contains more screenshots showing:
 - Generated portrait examples with different characteristics
