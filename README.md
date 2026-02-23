@@ -42,6 +42,11 @@ The generator uses a quantized Wasserstein GAN (WGAN) trained on portrait data, 
 <img src="images/openmsx0033.png" width="45%"> <img src="images/openmsx0035.png" width="45%">
 
 
+### Internal Image Representation
+the network generate 24x24 images with 256 gray levels, but the msx have only 16 colors, just one gray , and don't allow to render more than 2 colors in same region. some ideas for a better rendering are coming.
+
+  <img src="images/04901.png " style="image-rendering: pixelated;" width="10%"> <img src="images/04902.png " style="image-rendering: pixelated;" width="10%"> <img src="images/04903.png " style="image-rendering: pixelated;" width="10%"> <img src="images/04904.png " style="image-rendering: pixelated;" width="10%"> <img src="images/04906.png " style="image-rendering: pixelated;" width="10%"> <img src="images/04909.png " style="image-rendering: pixelated;" width="10%">  
+
 ## Technical Details
 
 ### Architecture
