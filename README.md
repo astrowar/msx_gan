@@ -29,7 +29,7 @@ The generator uses a quantized Wasserstein GAN (WGAN) trained on portrait data, 
 
 ### Architecture
 
-- **Training Framework**: PyTorch-based WGAN with 4-bit weight quantization
+- **Training Framework**: PyTorch-based WGAN  
 - **Model**: Compact generator network optimized for 8-bit inference
 - **Input**: 64-dimensional latent vector (z-space)
 - **Output**: 24x24 pixel monochrome image
@@ -52,6 +52,10 @@ The network is converted to fixed-point format to run on MSX:
 - **Gray Levels**: Network generates 256 gray levels internally, but only 8 are displayed on screen
 - **Screen Mode**: Uses MSX Screen Mode 1 (Text mode with custom characters)
 - **Resolution Limitation**: 24x24 is the maximum practical resolution for Screen Mode 1. Higher resolutions would require more advanced screen modes (Screen 2, 4, etc.), potentially making the project incompatible with other computers in the same 8-bit category
+
+### Training Dataset
+
+The training dataset was **synthetically generated using Zimage Turbo**, so there is no interest in publishing the full dataset. However, sample images are available in [train/images_v6/faces/](train/images_v6/faces/) for reference.
 
 ## Project Structure
 
@@ -80,7 +84,7 @@ The network is converted to fixed-point format to run on MSX:
 │   ├── build.sh               # Build script (Linux)
 │   └── build.bat              # Build script (Windows)
 │
-├── cluster/                    # Latent space analysis
+├── cluster[Not public]/                    # Latent space analysis
 │   ├── cluster.py             # K-means clustering on z-space
 │   ├── compute_z_mean.py      # Compute characteristic vectors
 │   ├── infer_classifier_batch.py  # Batch inference tool
@@ -112,9 +116,11 @@ The network is converted to fixed-point format to run on MSX:
 
 ### Training the Network
 
+The training dataset was synthetically generated using Zimage Turbo. Sample images are provided in `train/images_v6/faces/` for reference.
+
 ```bash
 cd train
-python train_wgan_v4.py --dataset <path_to_dataset> --epochs 200
+python train_wgan_v4.py --dataset train/images_v6/faces/ --epochs 200
 ```
 
 ### Exporting Weights
