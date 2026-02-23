@@ -36,13 +36,22 @@ The generator uses a quantized Wasserstein GAN (WGAN) trained on portrait data, 
 - **Runtime**: Pure C implementation with quantized integer operations
 - **Target Hardware**: MSX (Z80 @ 3.58 MHz)
 
-### Quantization
+### Implementation
 
-The network uses aggressive quantization to fit within MSX constraints:
-- 4-bit weights for most layers
-- 8-bit activations
-- Integer-only arithmetic (no floating point)
+The network is converted to fixed-point format to run on MSX:
+- Weights stored in ROM (not RAM or disk)
+- Fixed-point arithmetic (primarily Q8 format, with some sections using 8.8 fixed-point)
+- Integer-only operations (no floating point)
+- Requires extensive mathematical optimizations for Z80
 - Optimized matrix operations for Z80
+- Uses only 32KB RAM bank (out of 64KB available) since weights are in ROM
+
+### Display Characteristics
+
+- **Output Resolution**: 24x24 pixels
+- **Gray Levels**: Network generates 256 gray levels internally, but only 8 are displayed on screen
+- **Screen Mode**: Uses MSX Screen Mode 1 (Text mode with custom characters)
+- **Resolution Limitation**: 24x24 is the maximum practical resolution for Screen Mode 1. Higher resolutions would require more advanced screen modes (Screen 2, 4, etc.), potentially making the project incompatible with other computers in the same 8-bit category
 
 ## Project Structure
 
@@ -161,32 +170,62 @@ These tools help in creating the selection menu by mapping user choices to speci
 
 ## Performance
 
-- **Generation Time**: ~2-3 seconds per portrait on real MSX hardware
-- **Memory Usage**: Optimized to fit within 64KB RAM constraints
-- **ROM Size**: Approximately 32-48KB (including all weights)
+- **Generation Time**: ~20 minutes per portrait on real MSX hardware
+- **Memory Usage**: Uses only 32KB RAM bank (weights stored in ROM)
+- **ROM Size**: Approximately 128KB (including all network weights)
 
 ## Screenshots
 
-The `images/` directory contains screenshots showing:
-- Generated portrait examples
-- Selection menu interface
-- Different characteristic combinations
+### Selection Menu
+![Selection Menu](images/openmsx0024.png)
+![Menu Options](images/openmsx0025.png)
+
+### Generated Portraits
+![Portrait Example 1](images/openmsx0026.png)
+![Portrait Example 2](images/openmsx0027.png)
+![Portrait Example 3](images/openmsx0029.png)
+
+### Various Characteristics
+![Different Styles 1](images/openmsx0030.png)
+![Different Styles 2](images/openmsx0032.png)
+![Different Styles 3](images/openmsx0033.png)
+![Different Styles 4](images/openmsx0035.png)
+
+### Menu 
+![Different Styles 4](images/openmsx0038.png)
+
+The `images/` directory contains more screenshots showing:
+- Generated portrait examples with different characteristics
+- Selection menu interface and navigation
+- Random generation results
 
 ## Technical Challenges Solved
 
-1. **Extreme Quantization**: Reducing a neural network to 4-bit weights while maintaining quality
-2. **Integer-Only Inference**: Implementing matrix operations without floating point
-3. **Memory Constraints**: Fitting a complete GAN generator in <64KB
-4. **Speed Optimization**: Making inference practical on a 3.58 MHz processor
-5. **Latent Space Control**: Mapping discrete characteristics to continuous z-space
+1. **Fixed-Point Conversion**: Converting floating-point neural network to fixed-point format (Q8 and 8.8)
+2. **Mathematical Optimizations**: Extensive optimizations required for efficient Z80 execution
+3. **Integer-Only Inference**: Implementing matrix operations without floating point hardware
+4. **Memory Architecture**: Storing 128KB of weights in ROM while using only 32KB RAM
+5. **Performance Optimization**: Achieving inference on a 3.58 MHz Z80 processor (~20 min per portrait)
+6. **Display Constraints**: Reducing 256 internal gray levels to 8 displayable levels
+7. **Latent Space Control**: Mapping discrete user-selected characteristics to continuous z-space vectors
+
+## Known Limitations
+
+- **Display Quality**: Network generates 256 gray levels, but only 8 can be displayed on screen
+- **Resolution Cap**: 24x24 pixels is the maximum for Screen Mode 1 compatibility
+- **User Interface**: Interface needs additional polish and refinement
+- **Generation Time**: ~20 minutes per portrait on real hardware
+- **Portability**: Higher resolutions would require advanced screen modes, potentially breaking compatibility with other 8-bit computers in the same category
 
 ## Future Improvements
 
-- Support for different screen modes (Screen 2, Screen 4)
+- Interface polish and better user experience
+- Support for different screen modes (Screen 2, Screen 4) for higher resolution/quality
 - Color portrait generation
 - Animation/morphing between portraits
 - Save/load favorite portraits
 - Expanded characteristic options
+- Performance optimizations to reduce generation time
 
 ## License
 
@@ -200,6 +239,8 @@ This project is provided as-is for educational and personal use.
 - MSX community for hardware specifications and support
 
 ## Author
+
+**Eraldo M R Junior**
 
 Created as an exploration of running modern neural networks on vintage 8-bit hardware.
 
