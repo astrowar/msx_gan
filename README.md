@@ -177,7 +177,7 @@ These tools help in creating the selection menu by mapping user choices to speci
 ## Performance
 
 - **Generation Time**: ~20 minutes per portrait on real MSX hardware
-- **Memory Usage**: Uses only 32KB RAM bank (weights stored in ROM)
+- **Memory Usage**: Uses only 16KB RAM bank (weights stored in ROM)
 - **ROM Size**: Approximately 128KB (including all network weights)
 
 ## Screenshots
@@ -210,7 +210,7 @@ The `images/` directory contains more screenshots showing:
 1. **Fixed-Point Conversion**: Converting floating-point neural network to fixed-point format (Q8 and 8.8)
 2. **Mathematical Optimizations**: Extensive optimizations required for efficient Z80 execution
 3. **Integer-Only Inference**: Implementing matrix operations without floating point hardware
-4. **Memory Architecture**: Storing 128KB of weights in ROM while using only 32KB RAM
+4. **Memory Architecture**: Storing 128KB of weights in ROM while using only 16KB RAM
 5. **Performance Optimization**: Achieving inference on a 3.58 MHz Z80 processor (~20 min per portrait)
 6. **Display Constraints**: Reducing 256 internal gray levels to 8 displayable levels
 7. **Latent Space Control**: Mapping discrete user-selected characteristics to continuous z-space vectors
