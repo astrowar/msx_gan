@@ -33,14 +33,13 @@ The generator uses a quantized Wasserstein GAN (WGAN) trained on portrait data, 
 
 
 ### Generated Portraits
-![Portrait Example 1](images/openmsx0025.png)
-![Portrait Example 2](images/openmsx0026.png)
-![Portrait Example 3](images/openmsx0027.png)
-![Portrait Example 4](images/openmsx0029.png)
-![Different Styles 5](images/openmsx0030.png)
-![Different Styles 6](images/openmsx0032.png)
-![Different Styles 7](images/openmsx0033.png)
-![Different Styles 8](images/openmsx0035.png)
+<img src="images/openmsx0025.png" width="45%"> <img src="images/openmsx0026.png" width="45%">
+
+<img src="images/openmsx0027.png" width="45%"> <img src="images/openmsx0029.png" width="45%">
+
+<img src="images/openmsx0030.png" width="45%"> <img src="images/openmsx0032.png" width="45%">
+
+<img src="images/openmsx0033.png" width="45%"> <img src="images/openmsx0035.png" width="45%">
 
 
 ## Technical Details
