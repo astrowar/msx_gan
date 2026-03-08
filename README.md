@@ -6,7 +6,7 @@ A neural network-based portrait generator running on MSX, an 8-bit computer powe
 
 ## Overview
 
-This project brings AI-generated portraits to the constraints of 1980s hardware. It generates 24x24 pixel monochrome portraits in real-time on the MSX, allowing users to customize physical characteristics or generate random portraits.
+This project brings AI-generated portraits to the constraints of 1980s hardware. It generates 24x24 pixel monochrome portraits  on the MSX, allowing users to customize physical characteristics or generate random portraits.
 
 The generator uses a quantized Wasserstein GAN (WGAN) trained on portrait data, then converted to 8-bit integer operations that can run efficiently on the Z80 processor.
 
@@ -198,7 +198,7 @@ These tools help in creating the selection menu by mapping user choices to speci
 
 ## Performance
 
-- **Generation Time**: ~20 minutes per portrait on real MSX hardware
+- **Generation Time**: ~6 minutes per portrait on real MSX hardware
 - **Memory Usage**: Uses only 16KB RAM bank (weights stored in ROM)
 - **ROM Size**: Approximately 128KB (including all network weights)
 
@@ -225,7 +225,7 @@ The `images/` directory contains more screenshots showing:
 - **Display Quality**: Network generates 256 gray levels, but only 8 can be displayed on screen
 - **Resolution Cap**: 24x24 pixels is the maximum for Screen Mode 1 compatibility
 - **User Interface**: Interface needs additional polish and refinement
-- **Generation Time**: ~20 minutes per portrait on real hardware
+- **Generation Time**: ~6 minutes per portrait on real hardware
 - **Portability**: Higher resolutions would require advanced screen modes, potentially breaking compatibility with other 8-bit computers in the same category
 
 ## Future Improvements
