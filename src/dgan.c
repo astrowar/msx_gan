@@ -327,7 +327,7 @@ void generate_z_from_user_input(i8 z_s8[64], Gender gender_in , HairStyle hair_s
 /// Program entry point
 void main()
 {
-  VDP_SetMode(VDP_MODE_SCREEN0);
+  VDP_SetMode(VDP_MODE_SCREEN1);
   VDP_EnableVBlank(TRUE);
   VDP_ClearVRAM();
 
@@ -365,7 +365,7 @@ void main()
   HairTone hair_tone = HAIR_TONE_BROWN_DARK;
   HairType hair_type = HAIR_TYPE_STRAIGHT;
   SkinTone skin_tone = SKIN_TONE_MEDIUM;
-  int category_selection = 0; // 0: gender, 1: hair_style, 2: hair_tone, 3: hair_type, 4: skin_tone
+  int category_selection = 0; // 0: gender, 1: hair_style, 2: hair_tone, 3: hair_type, 4: skin_tone, 5: random
 
 
   
@@ -373,11 +373,11 @@ void main()
     int hasChange = 1;
     if (Keyboard_IsKeyPressed(KEY_UP)) {
       category_selection = (category_selection - 1);
-      if (category_selection < 0) category_selection = 4;
+      if (category_selection < 0) category_selection = 5;
       hasChange = 1;
     } else if (Keyboard_IsKeyPressed(KEY_DOWN)) {
       category_selection = (category_selection + 1);
-      if (category_selection > 4) category_selection = 0;
+      if (category_selection > 5) category_selection = 0;
       hasChange = 1;
     }
     else  if (Keyboard_IsKeyPressed(KEY_LEFT)) {
@@ -386,6 +386,7 @@ void main()
       else if (category_selection == 2) { hair_tone = (hair_tone + 3) % 4; }
       else if (category_selection == 3) { hair_type = (hair_type + 3) % 4; }
       else if (category_selection == 4) { skin_tone = 1 - skin_tone; }
+      // random não altera nada
       hasChange = 1;
     }
     else if (Keyboard_IsKeyPressed(KEY_RIGHT)) {
@@ -394,6 +395,7 @@ void main()
       else if (category_selection == 2) { hair_tone = (hair_tone + 1) % 4; }
       else if (category_selection == 3) { hair_type = (hair_type + 1) % 4; }
       else if (category_selection == 4) { skin_tone = 1 - skin_tone; }
+      // random não altera nada
       hasChange = 1;
     }
     else if (Keyboard_IsKeyPressed(KEY_ENTER)) {
@@ -401,43 +403,49 @@ void main()
       Print_DrawText("            ");
       Print_SetPosition(0, 4);
       Print_DrawText("PROCESSING");
-      //getUserSeed(in_z);
-      generate_z_from_user_input(in_z, gender, hair_style, hair_tone, hair_type, skin_tone);
+      if (category_selection == 5) {
+        getUserSeed(in_z);
+      } else {
+        generate_z_from_user_input(in_z, gender, hair_style, hair_tone, hair_type, skin_tone);
+      }
       generator_forward_int8(in_z, out_u8_nc_24_24);
       has_gen = 1;
     }
     if (hasChange == 1) {
-      int ROWSTART = 15;
+      int ROWSTART = 13;
       Print_SetPosition(0, ROWSTART);
       if (category_selection == 0) Print_DrawChar('*'); else Print_DrawChar(' ');
-        Print_DrawText("Gender: ");
-        if (gender == GENDER_MAN) Print_DrawText("Man   "); else Print_DrawText("Woman ");
-        Print_SetPosition(0, ROWSTART + 1);
-        if (category_selection == 1) Print_DrawChar('*'); else Print_DrawChar(' ');
-        Print_DrawText("Hair Style: ");
-        if (hair_style == HAIR_STYLE_LONG) Print_DrawText("Long   ");
-        else if (hair_style == HAIR_STYLE_MEDIUM) Print_DrawText("Medium ");
-        else Print_DrawText("Short  ");
-        Print_SetPosition(0, ROWSTART + 2);
-        if (category_selection == 2) Print_DrawChar('*'); else Print_DrawChar(' ');
-        Print_DrawText("Hair Tone: ");
-        if (hair_tone == HAIR_TONE_BLACK) Print_DrawText("Black      ");
-        else if (hair_tone == HAIR_TONE_BROWN_DARK) Print_DrawText("Brown Dark ");
-        else if (hair_tone == HAIR_TONE_BROWN_LIGHT) Print_DrawText("Brown Light");
-        else Print_DrawText("Light      ");
-        Print_SetPosition(0, ROWSTART + 3);
-        if (category_selection == 3) Print_DrawChar('*'); else Print_DrawChar(' ');
-        Print_DrawText("Hair Type: ");
-        if (hair_type == HAIR_TYPE_BALD) Print_DrawText("Bald    ");
-        else if (hair_type == HAIR_TYPE_CURLY) Print_DrawText("Curly   ");
-        else if (hair_type == HAIR_TYPE_STRAIGHT) Print_DrawText("Straight");
-        else Print_DrawText("Wavy    ");
-        Print_SetPosition(0, ROWSTART + 4);
-        if (category_selection == 4) Print_DrawChar('*'); else Print_DrawChar(' ');
-        Print_DrawText("Skin Tone: ");
-        if (skin_tone == SKIN_TONE_DARK) Print_DrawText("Dark  "); else Print_DrawText("Medium");
-        waitForNoKey();
-        hasChange = 0;
+      Print_DrawText("Gender: ");
+      if (gender == GENDER_MAN) Print_DrawText("Man   "); else Print_DrawText("Woman ");
+      Print_SetPosition(0, ROWSTART + 1);
+      if (category_selection == 1) Print_DrawChar('*'); else Print_DrawChar(' ');
+      Print_DrawText("Hair Style: ");
+      if (hair_style == HAIR_STYLE_LONG) Print_DrawText("Long   ");
+      else if (hair_style == HAIR_STYLE_MEDIUM) Print_DrawText("Medium ");
+      else Print_DrawText("Short  ");
+      Print_SetPosition(0, ROWSTART + 2);
+      if (category_selection == 2) Print_DrawChar('*'); else Print_DrawChar(' ');
+      Print_DrawText("Hair Tone: ");
+      if (hair_tone == HAIR_TONE_BLACK) Print_DrawText("Black      ");
+      else if (hair_tone == HAIR_TONE_BROWN_DARK) Print_DrawText("Brown Dark ");
+      else if (hair_tone == HAIR_TONE_BROWN_LIGHT) Print_DrawText("Brown Light");
+      else Print_DrawText("Light      ");
+      Print_SetPosition(0, ROWSTART + 3);
+      if (category_selection == 3) Print_DrawChar('*'); else Print_DrawChar(' ');
+      Print_DrawText("Hair Type: ");
+      if (hair_type == HAIR_TYPE_BALD) Print_DrawText("Bald    ");
+      else if (hair_type == HAIR_TYPE_CURLY) Print_DrawText("Curly   ");
+      else if (hair_type == HAIR_TYPE_STRAIGHT) Print_DrawText("Straight");
+      else Print_DrawText("Wavy    ");
+      Print_SetPosition(0, ROWSTART + 4);
+      if (category_selection == 4) Print_DrawChar('*'); else Print_DrawChar(' ');
+      Print_DrawText("Skin Tone: ");
+      if (skin_tone == SKIN_TONE_DARK) Print_DrawText("Dark  "); else Print_DrawText("Medium");
+      Print_SetPosition(0, ROWSTART + 7);
+      if (category_selection == 5) Print_DrawChar('*'); else Print_DrawChar(' ');
+      Print_DrawText("Random");
+      waitForNoKey();
+      hasChange = 0;
     }
   }
 
