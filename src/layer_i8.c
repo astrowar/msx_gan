@@ -138,6 +138,10 @@ static inline fx16_t fx16_mul_16_16(fx16_t a, fx16_t b) {
 
 // Q8.8 acumulado (int32) -> int8 com rounding
 static inline i8 acc_q88_to_i8_sat(i32 acc_q88) {
+//safe saturation 
+  if (acc_q88 > 8388607)  return 127;
+  if (acc_q88 < -8388608) return -128; 
+
   // arredondar para inteiro
   if (acc_q88 >= 0) acc_q88 += 128;
   else              acc_q88 -= 128;
@@ -208,91 +212,130 @@ static void upsample_nearest_i8(
     }
   }
 }
+typedef union {
+    u16 full;
+    struct { u8 lo; u8 hi; } b;   // a: bytes unsigned
+} u16_bytes;
+
+typedef union {
+    i16 full;
+    struct { u8 lo; i8 hi; } b;   // b: lo unsigned, hi signed
+} i16_bytes;
+
+static inline i32 mul_u16_i16_to_i32(u16 a, i16 b)
+{
+    const u16_bytes a16 = { .full = a };
+    const u8 a0 = a16.b.lo;
+    const u8 a1 = a16.b.hi;
+
+    const i16_bytes b16 = { .full = b };
+    const u8 b0u = b16.b.lo;
+    const i8 b1  = b16.b.hi;
+
+    // produto = a0*b0 + ((a0*b1 + a1*b0)<<8) + (a1*b1<<16)
+    i32 p  = (i32)a0 * (i32)b0u;
+    p     += (((i32)a0 * (i32)b1) + ((i32)a1 * (i32)b0u)) << 8;
+    p     += ((i32)a1 * (i32)b1) << 16;
+
+    return p;
+}
+
+ 
+
+typedef union {
+    i32 full;
+    struct { u8 b0,b1,b2,b3; } b; // ordem em memória
+} i32_bytes;
+ 
+static inline u16 make_u16(u8 lo, u8 hi) {
+   i16_bytes x ;
+   x.b.lo = lo;
+   x.b.hi = hi;
+   return  x.full; 
+  }
+ 
+static inline i16 make_i16(u8 lo, u8 hi) { return (i16)make_u16(lo, hi); }
+
+static inline i32 mul_i32_q15_to_q88(i32 sum, q15_t scaleW_q15)
+{
+    i32_bytes S; S.full = sum;
+
+    // LITTLE ENDIAN: b0=LSB ... b3=MSB
+    const u16 lo = make_u16(S.b.b0, S.b.b1);
+    const i16 hi = make_i16(S.b.b2, S.b.b3);
+
+    i16 s = (i16)scaleW_q15;
+
+    i32 prod = ((i32)hi * (i32)s) << 16;
+    prod += mul_u16_i16_to_i32(lo, s);
+
+    prod += (prod >= 0) ? 64 : -64;
+    return (prod >> 7);
+}
+
 // ------------------------------------------------------------
 // Conv3x3 int8 -> int8 (internamente acumula em Q8.8)
 // Entrada/saída int8 representam inteiros "puros" (equiv. Q8.8 com frac=0)
 // ------------------------------------------------------------
-static void conv3x3_i8(
+
+
+ static void conv3x3_i8(
     const i8* in_i8, int Cin, int H, int W,
     const i8* wq, q15_t scaleW_q15,
-    const fx16_t* b,      // pode ser NULL
+    const fx16_t* b,      // pode ser NULL (bias já em Q8.8)
     int Cout,
     i8* out_i8,
     int apply_relu)
 {
   const int HW = H * W;
-  const int W_OC_STRIDE = Cin * 9;   // pesos por canal de saída
-
-  // pré-cálculo por chamada
-  const u16 su = (u16)scaleW_q15; // scale positivo
-  const u8 slo = (u8)(su & 0xFF);
-  const u8 shi = (u8)(su >> 8);
-  const u8 use_lo_only = (shi == 0);
+  const int W_OC_STRIDE = Cin * 9;
 
   for (int oc = 0; oc < Cout; ++oc) {
     const i32 bias_q88 = b ? (i32)b[oc] : 0;
 
-    // base dos pesos e da saída para este canal de saída
     const i8* w_oc = wq + oc * W_OC_STRIDE;
     i8* out_oc = out_i8 + oc * HW;
 
     for (int y = 0; y < H; ++y) {
-      const int yW = y * W;
-      i8* out_row = out_oc + yW;
+      i8* out_row = out_oc + y * W;
 
       for (int x = 0; x < W; ++x) {
 
-        i32 acc = bias_q88; // acumulador em Q8.8
-
-        // ponteiros incrementais por canal de entrada
-        const i8* pin = in_i8;
-        const i8* pw  = w_oc;
+        // acumula só a*w (sem scale) em inteiro
+        i32 sum_aw = 0;
 
         for (int ic = 0; ic < Cin; ++ic) {
+          const i8* pin = in_i8 + ic * HW;
+          const i8* pw  = w_oc  + ic * 9;
 
           for (i8 ky = -1; ky <= 1; ++ky) {
             int yy = y + ky;
             if ((unsigned)yy >= (unsigned)H) continue;
 
             const int yy_mul_w = yy * W;
-            const int ky_plus_one_mul_3 = (ky + 1) * 3;
+            const int kbase = (ky + 1) * 3;
 
             for (i8 kx = -1; kx <= 1; ++kx) {
               int xx = x + kx;
               if ((unsigned)xx >= (unsigned)W) continue;
 
-              // int8 ativação -> Q8.8 (fração zero)
-              //fx16_t a_q = (fx16_t)((i16)pin[yy_mul_w + xx] << 8);                            
-              i8 a_q = (i8)pin[yy_mul_w + xx];                            
-              i8 wi = pw[ky_plus_one_mul_3 + (kx + 1)];
+              const i8 a  = pin[yy_mul_w + xx];
+              const i8 wi = pw[kbase + (kx + 1)];
 
-              fx16_t w_q;
-              if (use_lo_only) {
-                w_q = w_i8_scale_q15_to_q88_lo(wi, slo);
-              } else {
-                w_q = w_i8_scale_q15_to_q88_hi_lo(wi, shi, slo);
-              }
-
-              //fx16_t prod_q = fx16_mul_16_16_z80((fx16_t)a_q, w_q); // Q8.8
-              fx16_t prod_q = fx16_mul_8_16_z80((fx16_t)a_q, w_q); // Q8.8
-          
-              
-
-              acc += (i32)prod_q;
+              // 8x8->16 (rápido) e soma em 32
+              //i16  awi = a * wi ; 
+              //sum_aw += (i32)awi;
+              sum_aw += (i16)a * (i16)wi;
             }
           }
-
-          // próximo canal de entrada / pesos (soma em vez de multiplicação)
-          pin += HW;
-          pw  += 9;
         }
 
-        // ReLU
-        if (apply_relu && acc < 0) {
-          acc = 0;
-        }
+        // aplica scale UMA vez por pixel -> Q8.8
+        i32 acc = bias_q88 + mul_i32_q15_to_q88(sum_aw, scaleW_q15);
 
-        // saída via ponteiro de linha (evita multiplicações no índice final)
+        // ReLU em Q8.8
+        if (apply_relu && acc < 0) acc = 0;
+
         out_row[x] = acc_q88_to_i8_sat(acc);
       }
     }
