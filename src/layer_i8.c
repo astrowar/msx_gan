@@ -37,103 +37,10 @@ static inline i8 clamp_i8_s(i32 v) {
 }
 
 
-typedef union {
-    i16 full;
-    struct {
-        u8 l;  // Parte fracionária (Low byte)
-        i8 h;   // Parte inteira (High byte com sinal)
-    } bytes;
-} fx16_hl;
+ 
+ 
 
-static inline fx16_t fx16_mul_16_16_z80(fx16_t a, fx16_t b) {
-    fx16_hl ua = { .full = a };
-    fx16_hl ub = { .full = b };
-
-    // 2. Forçamos multiplicações de 16 bits (muito mais rápidas que 32 bits).
-    // O Z80 fará isso usando as rotinas de 8x8->16 ou 16x16->16 do compilador.
-    i16 ah_bh = (i16)ua.bytes.h * ub.bytes.h; 
-    
-    // 3. Early Exit (Saída Antecipada)
-    // Se a parte inteira já estourou o limite do Q8.8, pulamos o resto da matemática!
-    // O valor máximo da parte inteira que cabe em um Q8.8 é 127 a -128.
-    if (ah_bh > 127) return 32767;
-    if (ah_bh < -128) return -32768;
-
-    // Calculamos as partes cruzadas e fracionárias em 16 bits
-    i16 cross1 = (i16)ua.bytes.h * ub.bytes.l;
-    i16 cross2 = (i16)ub.bytes.h * ua.bytes.l;
-    u16 al_bl = (u16)ua.bytes.l * ub.bytes.l;
-
-    // Para evitar o shift >> 8 da parte fracionária, lemos o High Byte direto
-    fx16_hl frac_round = { .full = (i16)(al_bl + 128) };
-
-    // 4. Somamos usando um acumulador de 32 bits APENAS no final.
-    // Somar em 32 bits no Z80 é muito rápido (são apenas rápidas instruções 
-    // ADD/ADC em cascata). O proibido era MULTIPLICAR em 32 bits.
-    i32 p = ((i32)ah_bh << 8) + cross1 + cross2 + frac_round.bytes.h;
-
-    // 5. Saturação final fina (caso os termos cruzados tenham gerado overflow)
-    if (p > 32767) return 32767;
-    if (p < -32768) return -32768;
-
-    return (fx16_t)p;
-}
-
-
-static inline fx16_t fx16_mul_8_16_z80(i8 a, fx16_t b) {
-    fx16_hl ua = { .full = 0 };
-    ua.bytes.h = a; // i8 para parte inteira, parte fracionária zero
-    fx16_hl ub = { .full = b };
-
-    // 2. Forçamos multiplicações de 16 bits (muito mais rápidas que 32 bits).
-    // O Z80 fará isso usando as rotinas de 8x8->16 ou 16x16->16 do compilador.
-    i16 ah_bh = (i16)ua.bytes.h * ub.bytes.h; 
-    
-    // 3. Early Exit (Saída Antecipada)
-    // Se a parte inteira já estourou o limite do Q8.8, pulamos o resto da matemática!
-    // O valor máximo da parte inteira que cabe em um Q8.8 é 127 a -128.
-    if (ah_bh > 127) return 32767;
-    if (ah_bh < -128) return -32768;
-
-    // Calculamos as partes cruzadas e fracionárias em 16 bits
-    i16 cross1 = (i16)ua.bytes.h * ub.bytes.l;
-    //i16 cross2 = (i16)ub.bytes.h * ua.bytes.l;
-    //u16 al_bl = (u16)ua.bytes.l * ub.bytes.l;
-
-    // Para evitar o shift >> 8 da parte fracionária, lemos o High Byte direto
-    //fx16_hl frac_round = { .full = (i16)(al_bl + 128) };
-
-    // 4. Somamos usando um acumulador de 32 bits APENAS no final.
-    // Somar em 32 bits no Z80 é muito rápido (são apenas rápidas instruções 
-    // ADD/ADC em cascata). O proibido era MULTIPLICAR em 32 bits.
-    i32 p = ((i32)ah_bh << 8) + cross1; // + frac_round.bytes.h;
-
-    // 5. Saturação final fina (caso os termos cruzados tenham gerado overflow)
-    if (p > 32767) return 32767;
-    if (p < -32768) return -32768;
-
-    return (fx16_t)p;
-}
-
-
-
-static inline fx16_t fx16_mul_16_16(fx16_t a, fx16_t b) {
-    i16 ah = (i16)(a >> 8);     // signed
-    i16 bh = (i16)(b >> 8);     // signed
-    u16 al = (u8)(a & 0xFF);  // unsigned
-    u16 bl = (u8)(b & 0xFF);  // unsigned
-
-    i32 p =
-        ((i32)ah * (i32)bh << 8) +   // ah*bh * 256
-        ((i32)ah * (i32)bl) +        // ah*bl
-        ((i32)bh * (i32)al) +        // bh*al
-        (((i32)al * (i32)bl + 128) >> 8); // (al*bl)/256 com rounding
-
-    if (p >  32767) p =  32767;
-    if (p < -32768) p = -32768;
-    return (fx16_t)p;
-}
-
+ 
 
 
 // Q8.8 acumulado (int32) -> int8 com rounding
@@ -150,63 +57,24 @@ static inline i8 acc_q88_to_i8_sat(i32 acc_q88) {
   return clamp_i8_s(vi);
 }
 
-// bias float -> int32 Q8.8 (1x por canal)
-static inline i32 bias_float_to_q88_i32(float x) {
-  // Se quiser evitar float aqui também, pré-converta no export.
-  float s = x * 256.0f;
-  i32 q = (i32)(s + (s >= 0.0f ? 0.5f : -0.5f));
-  return q;
-}
-
-// Arredondamento simétrico para shift à direita por 7
-static inline i16 rshift7_round_i16(i16 x) {
-  if (x >= 0) return (i16)((x + 64) >> 7);
-  return (i16)(-(((-x) + 64) >> 7));
-}
-
-typedef union {
-    i16 full;
-    struct {
-        u8 l;  // Parte fracionária (Low byte)
-        i8 h;   // Parte inteira (High byte com sinal)
-    } bytes;
-} i16_hl;
-
  
-
-// wi * scale_q15 -> Q8.8 (caminho rápido: só byte low)
-static inline fx16_t w_i8_scale_q15_to_q88_lo(i8 wi, u8 slo) {
-  i16 t = (i16)wi *  slo;
-  return (fx16_t)rshift7_round_i16(t);
-}
-
-// wi * scale_q15 -> Q8.8 (geral, sem int32)
-static inline fx16_t w_i8_scale_q15_to_q88_hi_lo(i8 wi, u8 shi, u8 slo) {
-  i16 t_hi = (i16)wi * (u8)shi;
-  i16 t_lo = (i16)wi * (u8)slo;
-  i16 q = (i16)(t_hi << 1);               // 2*(wi*shi)
-  q = (i16)(q + rshift7_round_i16(t_lo));     // + round((wi*slo)/128)
-  return (fx16_t)q;
-}
-
-static inline i32 div8_toward_zero_i32(i32 x) {
-  if (x >= 0) return x >> 3;
-  return -(((-x) >> 3));
-}
+ 
+  
+ 
 
 
 static void upsample_nearest_i8(
-    const i8* in, int C, int Hin, int Win,
-    i8* out, int Hout, int Wout)
+    const i8* in, u8 C, u8 Hin, u8 Win,
+    i8* out, u8 Hout, u8 Wout)
 {
-  for (int c = 0; c < C; ++c) {
+  for (u8 c = 0; c < C; ++c) {
     const i8* pin = in + c * Hin * Win;
     i8* pout = out + c * Hout * Wout;
 
-    for (int y = 0; y < Hout; ++y) {
-      int sy = (y * Hin) / Hout;
-      for (int x = 0; x < Wout; ++x) {
-        int sx = (x * Win) / Wout;
+    for (u8 y = 0; y < Hout; ++y) {
+      u8 sy = (y * Hin) / Hout;
+      for (u8 x = 0; x < Wout; ++x) {
+        u8 sx = (x * Win) / Wout;
         pout[y * Wout + x] = pin[sy * Win + sx];
       }
     }
@@ -247,12 +115,14 @@ typedef union {
     struct { u8 b0,b1,b2,b3; } b; // ordem em memória
 } i32_bytes;
  
-static inline u16 make_u16(u8 lo, u8 hi) {
-   i16_bytes x ;
-   x.b.lo = lo;
-   x.b.hi = hi;
-   return  x.full; 
-  }
+
+  static inline u16 make_u16(u8 lo, u8 hi) {
+    u16_bytes x;
+    x.b.lo = lo;
+    x.b.hi = hi;
+    return x.full;
+}
+
  
 static inline i16 make_i16(u8 lo, u8 hi) { return (i16)make_u16(lo, hi); }
 
@@ -279,65 +149,158 @@ static inline i32 mul_i32_q15_to_q88(i32 sum, q15_t scaleW_q15)
 // ------------------------------------------------------------
 
 
- static void conv3x3_i8(
-    const i8* in_i8, int Cin, int H, int W,
+//  static void conv3x3_i8_nounroll(
+//     const i8* in_i8, u8 Cin, u8 H, u8 W,
+//     const i8* wq, q15_t scaleW_q15,
+//     const fx16_t* b,      // pode ser NULL (bias já em Q8.8)
+//     int Cout,
+//     i8* out_i8,
+//     int apply_relu)
+// {
+//   const int HW = H * W;
+//   const int W_OC_STRIDE = Cin * 9;
+
+//   for (u8 oc = 0; oc < Cout; ++oc) {
+//     const i32 bias_q88 = b ? (i32)b[oc] : 0;
+
+//     const i8* w_oc = wq + oc * W_OC_STRIDE;
+//     i8* out_oc = out_i8 + oc * HW;
+
+//     for (u8 y = 0; y < H; ++y) {
+//       i8* out_row = out_oc + y * W;
+
+//       for (u8 x = 0; x < W; ++x) {
+
+//         // acumula só a*w (sem scale) em inteiro
+//         i32 sum_aw = 0;
+
+//         for (u8 ic = 0; ic < Cin; ++ic) {
+//           const i8* pin = in_i8 + ic * HW;
+//           const i8* pw  = w_oc  + ic * 9;
+
+//           for (i8 ky = -1; ky <= 1; ++ky) {
+
+//             u8 yy =  y +  ky;
+//             if ( yy >= H) continue; 
+
+//             const int yy_mul_w = yy * W;
+//             const int kbase = (ky + 1) * 3;
+
+//             for (i8 kx = -1; kx <= 1; ++kx) {
+//               u8 xx = x + kx;  
+//               if (xx >= W) continue;
+
+
+//               const i8 a  = pin[yy_mul_w + xx];
+//               const i8 wi = pw[kbase + (kx + 1)];
+
+//               sum_aw += (i16)a * (i16)wi;              
+//             }
+//           }
+//         }
+
+//         // aplica scale UMA vez por pixel -> Q8.8
+//         i32 acc = bias_q88 + mul_i32_q15_to_q88(sum_aw, scaleW_q15);
+
+//         // ReLU em Q8.8
+//         if (apply_relu && acc < 0) acc = 0;
+
+//         out_row[x] = acc_q88_to_i8_sat(acc);
+//       }
+//     }
+//   }
+// }
+
+static void conv3x3_i8(
+    const i8* in_i8, u8 Cin, u8 H, u8 W,
     const i8* wq, q15_t scaleW_q15,
     const fx16_t* b,      // pode ser NULL (bias já em Q8.8)
-    int Cout,
+    u8 Cout,
     i8* out_i8,
-    int apply_relu)
+    u8 apply_relu)
 {
-  const int HW = H * W;
-  const int W_OC_STRIDE = Cin * 9;
+    const u16 HW = (u16)H * (u16)W;
+    const u16 W_OC_STRIDE = (u16)Cin * 9;
 
-  for (int oc = 0; oc < Cout; ++oc) {
-    const i32 bias_q88 = b ? (i32)b[oc] : 0;
+    const i8* w_oc = wq;
+    i8* out_oc = out_i8;
 
-    const i8* w_oc = wq + oc * W_OC_STRIDE;
-    i8* out_oc = out_i8 + oc * HW;
+    for (u8 oc = 0; oc < Cout; ++oc) {
+        const i32 bias_q88 = b ? (i32)b[oc] : 0;
 
-    for (int y = 0; y < H; ++y) {
-      i8* out_row = out_oc + y * W;
+        for (u8 y = 0; y < H; ++y) {
+            i8* out_row = out_oc + (u16)y * W;
 
-      for (int x = 0; x < W; ++x) {
+            for (u8 x = 0; x < W; ++x) {
+                i32 sum_aw = 0;
 
-        // acumula só a*w (sem scale) em inteiro
-        i32 sum_aw = 0;
+                const i8* pin = in_i8;
+                const i8* pw  = w_oc;
 
-        for (int ic = 0; ic < Cin; ++ic) {
-          const i8* pin = in_i8 + ic * HW;
-          const i8* pw  = w_oc  + ic * 9;
+                for (u8 ic = 0; ic < Cin; ++ic) {
+                    // ky = -1
+                    {
+                        u8 yy = y - 1;
+                        if (yy < H) {
+                            const i8* row = pin + (u16)yy * W;
 
-          for (i8 ky = -1; ky <= 1; ++ky) {
-            int yy = y + ky;
-            if ((unsigned)yy >= (unsigned)H) continue;
+                            u8 xx = x - 1;
+                            if (xx < W) sum_aw += (i16)row[xx] * (i16)pw[0];
 
-            const int yy_mul_w = yy * W;
-            const int kbase = (ky + 1) * 3;
+                            xx = x;
+                            if (xx < W) sum_aw += (i16)row[xx] * (i16)pw[1];
 
-            for (i8 kx = -1; kx <= 1; ++kx) {
-              int xx = x + kx;
-              if ((unsigned)xx >= (unsigned)W) continue;
+                            xx = x + 1;
+                            if (xx < W) sum_aw += (i16)row[xx] * (i16)pw[2];
+                        }
+                    }
 
-              const i8 a  = pin[yy_mul_w + xx];
-              const i8 wi = pw[kbase + (kx + 1)];
+                    // ky = 0
+                    {
+                        u8 yy = y;
+                        const i8* row = pin + (u16)yy * W;
 
-              // 8x8->16 (rápido) e soma em 32
-              //i16  awi = a * wi ; 
-              //sum_aw += (i32)awi;
-              sum_aw += (i16)a * (i16)wi;
+                        u8 xx = x - 1;
+                        if (xx < W) sum_aw += (i16)row[xx] * (i16)pw[3];
+
+                        xx = x;
+                        sum_aw += (i16)row[xx] * (i16)pw[4];
+
+                        xx = x + 1;
+                        if (xx < W) sum_aw += (i16)row[xx] * (i16)pw[5];
+                    }
+
+                    // ky = +1
+                    {
+                        u8 yy = y + 1;
+                        if (yy < H) {
+                            const i8* row = pin + (u16)yy * W;
+
+                            u8 xx = x - 1;
+                            if (xx < W) sum_aw += (i16)row[xx] * (i16)pw[6];
+
+                            xx = x;
+                            if (xx < W) sum_aw += (i16)row[xx] * (i16)pw[7];
+
+                            xx = x + 1;
+                            if (xx < W) sum_aw += (i16)row[xx] * (i16)pw[8];
+                        }
+                    }
+
+                    pin += HW;
+                    pw  += 9;
+                }
+
+                {
+                    i32 acc = bias_q88 + mul_i32_q15_to_q88(sum_aw, scaleW_q15);
+                    if (apply_relu && acc < 0)
+                        acc = 0;
+                    out_row[x] = acc_q88_to_i8_sat(acc);
+                }
             }
-          }
         }
 
-        // aplica scale UMA vez por pixel -> Q8.8
-        i32 acc = bias_q88 + mul_i32_q15_to_q88(sum_aw, scaleW_q15);
-
-        // ReLU em Q8.8
-        if (apply_relu && acc < 0) acc = 0;
-
-        out_row[x] = acc_q88_to_i8_sat(acc);
-      }
+        w_oc  += W_OC_STRIDE;
+        out_oc += HW;
     }
-  }
 }
